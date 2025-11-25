@@ -31,12 +31,7 @@
             android:name=".OverlayService"
             android:foregroundServiceType="shortService" />
 
-        <activity
-            android:name=".OverlayActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true" />
+
     </application>
 
 </manifest>

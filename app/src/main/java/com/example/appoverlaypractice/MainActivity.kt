@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -95,6 +96,19 @@ fun MainScreen(onShowOverlayClicked: () -> Unit) {
         )
         Button(onClick = onShowOverlayClicked) {
             Text("Show Overlay in 30s")
+        }
+
+        Row {
+            Button(onClick = {
+                GlobalManager.incrementCount()
+            }) {
+                Text("Increment")
+            }
+            Button(onClick = {
+                GlobalManager.decrementCount()
+            }) {
+                Text("Decrement")
+            }
         }
     }
 }
