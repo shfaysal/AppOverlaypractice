@@ -5,18 +5,25 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.view.Gravity
+import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 
 class OverlayService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private val runnable = Runnable {
-        showOverlay()
+    private var windowManager: WindowManager? = null
+    private var overlayView: LifecycleComposeView? = null
+
+    private val showOverlayRunnable = Runnable {
+        addOverlayView()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -24,17 +31,39 @@ class OverlayService : Service() {
         val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
 
-//        handler.postDelayed(runnable, 5_000) // 30 seconds
-        showOverlay()
+        handler.postDelayed(showOverlayRunnable, 5_000) // 5 seconds
 
         return START_STICKY
     }
 
-    private fun showOverlay() {
-        val intent = Intent(this, OverlayActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    private fun addOverlayView() {
+        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        overlayView = LifecycleComposeView(this) {
+            removeOverlayView()
         }
-        startActivity(intent)
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        )
+        params.gravity = Gravity.TOP or Gravity.START
+        windowManager?.addView(overlayView, params)
+    }
+
+    private fun removeOverlayView() {
+        if (overlayView != null && windowManager != null) {
+            windowManager?.removeView(overlayView)
+            overlayView = null
+        }
         stopSelf()
     }
 
@@ -44,17 +73,12 @@ class OverlayService : Service() {
             this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
         )
 
-        val fullScreenIntent = Intent(this, OverlayActivity::class.java).let {
-            PendingIntent.getActivity(this, 1, it, PendingIntent.FLAG_IMMUTABLE)
-        }
-
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Overlay Service")
             .setContentText("Waiting to show overlay...")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setFullScreenIntent(fullScreenIntent, true)
             .build()
     }
 
@@ -76,7 +100,8 @@ class OverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-//        handler.removeCallbacks(runnable)
+        handler.removeCallbacks(showOverlayRunnable)
+        removeOverlayView()
     }
 
     companion object {
